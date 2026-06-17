@@ -128,14 +128,16 @@ def _fmtday(s):
         return datetime.strptime((s or '')[:10], '%Y-%m-%d').strftime('%b %-d, %Y')
     except ValueError:
         return ''
-def fmt_dates(dates):                            # set of YYYY-MM-DD -> single date or range
+def fmt_dates(dates):                            # set of YYYY-MM-DD -> single date, comma pair, or range
     ds = sorted({d[:10] for d in dates if d})
     if not ds:
         return ''
     lo, hi = _fmtday(ds[0]), _fmtday(ds[-1])
     if lo == hi:
         return lo + (f' ({len(dates)}×)' if len(dates) > 1 else '')
-    return f'{lo} – {hi}'
+    if len(ds) == 2:
+        return f'{lo}, {hi}'           # two distinct gifts: comma, not a span
+    return f'{lo} – {hi}'              # range when 3+
 
 # ---------- subject donors: ALL Reynoso itemized receipts (June e-file + earlier
 # schedule_a), de-duplicated by FEC transaction_id so an overlapping contribution
@@ -419,7 +421,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reynoso&rsquo;s Cuomo + AIPAC Donors</title>
+<title>Reynoso&rsquo;s Donors to Cuomo &amp; Pro-Israel PACs</title>
 <meta name="description" content="Which Reynoso for Congress donors also funded Andrew Cuomo, the conservative pro-Cuomo / anti-Zohran super PACs, and AIPAC &amp; allied PACs &mdash; a cross-reference of public campaign-finance filings.">
 <style>
   :root{--ink:#1b1b1b;--paper:#f4f5f7;--card:#ffffff;--rule:#cdd1d8;--accent:#16294d;
@@ -430,7 +432,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   body{margin:0;background:var(--paper);color:var(--ink);
     font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
-  header{border-bottom:3px double var(--ink);padding-bottom:18px;margin-bottom:24px}
+  header{border-bottom:1px solid var(--rule);padding-bottom:18px;margin-bottom:24px}
+  .kicker{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600;margin:0 0 8px}
   h1{font-size:33px;line-height:1.1;margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
   .sub{color:var(--muted);font-size:15px;max-width:74ch;margin:0}
   .sub a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--rule)}
@@ -438,7 +441,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   .topline{display:flex;flex-wrap:wrap;gap:0;margin:26px 0 0;border:1px solid var(--accent)}
   .topline .t{flex:1 1 240px;padding:18px 20px;background:var(--card);border-right:1px solid var(--rule)}
   .topline .t:last-child{border-right:0}
-  .topline .t .n{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:30px;font-weight:700;display:block;letter-spacing:-.02em}
+  .topline .t .n{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:30px;font-weight:700;display:block;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .topline .t .l{font-size:12.5px;color:var(--muted);margin-top:5px;display:block}
   .topline .t .l b{color:var(--ink)}
   .topline .t .sub{display:block;font-size:11px;letter-spacing:.03em;color:var(--ref);margin-top:3px}
@@ -456,24 +459,25 @@ TEMPLATE = r"""<!DOCTYPE html>
   .card.noarenas .who{border-right:0;border-bottom:0}
   .arena .ah{font-size:10px;text-transform:uppercase;letter-spacing:.09em;margin:0 0 6px;font-weight:700}
   .arena.cuo .ah{color:var(--cuo)} .arena.ie .ah{color:var(--ie)} .arena.aip .ah{color:var(--aip)}
-  .arena .tot{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:18px;font-weight:600}
-  .pac{font-size:12.5px;padding:3px 0;border-bottom:1px dotted var(--rule);display:flex;justify-content:space-between;gap:8px}
-  .pac:last-child{border-bottom:0}
-  .pac .amt{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;white-space:nowrap}
+  .arena.cuo .tot{color:var(--cuo)} .arena.ie .tot{color:var(--ie)} .arena.aip .tot{color:var(--aip)}
+  .arena .tot{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+  .pac{font-size:12.5px;padding:3px 0;display:flex;justify-content:space-between;gap:8px}
+  .pac .amt{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
   .pac .src{display:block;font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:9.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--src)}
   .pac a,#pacTable a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent)}
   .pac a:hover,#pacTable a:hover{background:var(--chip)}
   .yr{color:var(--muted);font-weight:400}
   .name{font-size:18px;font-weight:700;margin:0 0 2px}
   .meta{font-size:12.5px;color:var(--muted);margin:2px 0}
-  .reyamt{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:14px;margin-top:9px}
+  .reyamt{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:14px;margin-top:9px;font-variant-numeric:tabular-nums}
   .reyamt b{font-size:17px}
   .badge{display:inline-block;font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:9.5px;letter-spacing:.05em;
     text-transform:uppercase;padding:2px 6px;margin:2px 4px 2px 0;border:1px solid var(--rule);vertical-align:middle}
   .badge.ref{color:#fff;background:var(--ref);border-color:var(--ref)}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule)}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  th,td{text-align:left;padding:7px 10px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--rule)}
+  #pacTable tbody tr:hover{background:var(--chip)}
   td.num,th.num{text-align:right;font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-variant-numeric:tabular-nums}
   footer{margin-top:46px;border-top:1px solid var(--rule);padding-top:16px;font-size:12px;color:var(--muted)}
   footer a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--rule)}
@@ -487,7 +491,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <body>
 <div class="wrap">
   <header>
-    <h1>Reynoso&rsquo;s Cuomo + AIPAC Donors</h1>
+    <p class="kicker">Campaign-finance cross-reference &middot; FEC &middot; NYC CFB &middot; NY State BOE</p>
+    <h1>Reynoso&rsquo;s Donors to Cuomo &amp; Pro-Israel PACs</h1>
     <p class="sub">Reynoso for Congress donors who also show up in Andrew&nbsp;Cuomo&rsquo;s mayoral campaign,
     the conservative, pro-Cuomo&nbsp;/&nbsp;anti-Zohran independent-expenditure PACs, or AIPAC&nbsp;&amp;&nbsp;allied PACs
     &mdash; plus everyone the campaign refunded. See the <a href="#method">methodology</a> and
