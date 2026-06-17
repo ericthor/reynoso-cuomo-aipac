@@ -435,13 +435,11 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sub{color:var(--muted);font-size:15px;max-width:74ch;margin:0}
   .sub a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--rule)}
   .sub a:hover{background:var(--chip)}
-  .statcap{font-size:12.5px;color:var(--muted);margin:14px 2px 0}
-  .statcap b{color:var(--ink)}
   .topline{display:flex;flex-wrap:wrap;gap:0;margin:26px 0 0;border:1px solid var(--accent)}
   .topline .t{flex:1 1 240px;padding:18px 20px;background:var(--card);border-right:1px solid var(--rule)}
   .topline .t:last-child{border-right:0}
   .topline .t .n{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:30px;font-weight:700;display:block;letter-spacing:-.02em}
-  .topline .t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:5px;display:block}
+  .topline .t .l{font-size:12.5px;color:var(--muted);margin-top:5px;display:block}
   .topline .t .l b{color:var(--ink)}
   .topline .t .sub{display:block;font-size:11px;letter-spacing:.03em;color:var(--ref);margin-top:3px}
   .note{font-size:12.5px;color:var(--muted);margin:14px 0;scroll-margin-top:16px}
@@ -474,9 +472,6 @@ TEMPLATE = r"""<!DOCTYPE html>
   .badge{display:inline-block;font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;font-size:9.5px;letter-spacing:.05em;
     text-transform:uppercase;padding:2px 6px;margin:2px 4px 2px 0;border:1px solid var(--rule);vertical-align:middle}
   .badge.ref{color:#fff;background:var(--ref);border-color:var(--ref)}
-  .badge.arenas2{color:var(--accent);border-color:var(--accent)}
-  .conf{font-size:10px;font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.04em}
-  .conf.y{color:var(--good)} .conf.n{color:var(--warn)}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule)}
   th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
@@ -514,12 +509,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   <h2>IE / PAC committees</h2>
   <table id="pacTable"><thead><tr><th>Committee</th><th class="num">Reynoso donors</th><th class="num">Total (deduped)</th></tr></thead><tbody></tbody></table>
 
-  <p class="statcap" id="statcap"></p>
-
   <div class="note" id="method">
-    <b>Method.</b> Donors matched by normalized <b>last&nbsp;+&nbsp;first</b> name (organizations whole).
-    <span class="conf y">&#10003;zip</span> = ZIP also matched (strong); <span class="conf n">?zip</span> = name-only,
-    possibly a different person. NYC-CFB and NY-State report the same 2025 IE committees, so those are
+    <b>Method.</b> Donors matched by normalized <b>last&nbsp;+&nbsp;first</b> name (organizations whole), then
+    <b>confirmed by full ZIP code</b> (or employer); name-only matches are treated as different people and excluded,
+    so every donor shown is ZIP-confirmed. NYC-CFB and NY-State report the same 2025 IE committees, so those are
     <b>de-duplicated by committee</b> (larger figure kept), not added. Cuomo and AIPAC are separate arenas.
     &ldquo;Refunded&rdquo; = money the campaign returned (Schedule&nbsp;20A), tied to a donor by full ZIP and gift date.
     The <b>Cuomo&nbsp;/&nbsp;Fix the City</b> total counts <b>every</b> ZIP/employer-confirmed Reynoso donor who also gave
@@ -553,7 +546,6 @@ TEMPLATE = r"""<!DOCTYPE html>
 const DATA = __PAYLOAD__;
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-const conf = c => c?'<span class="conf y">&#10003;zip</span>':'<span class="conf n">?zip</span>';
 const REFS=DATA.pac_refs||{};
 const pacName=name=>{const u=REFS[name];return u?`<a href="${esc(u)}" target="_blank" rel="noopener" title="Source">${esc(name)}</a>`:esc(name);};
 
@@ -562,37 +554,33 @@ document.getElementById('topline').innerHTML=[
   ['var(--cuo)',money(st.rey_from_cuomo),'Raised by Reynoso from Cuomo / Fix the City donors',st.n_rey_from_cuomo,st.rmv_cuomo_n,st.rmv_cuomo_amt],
   ['var(--aip)',money(st.rey_from_aipac),'Raised by Reynoso from AIPAC &amp; allied donors',st.n_rey_from_aipac,st.rmv_aipac_n,st.rmv_aipac_amt],
 ].map(([c,n,l,k,rn,ra])=>`<div class="t"><span class="n" style="color:${c}">${n}</span><span class="l">${l} &middot; <b>${k}</b> donor${k===1?'':'s'}</span>${rn?`<span class="sub">minus ${rn} refunded donor${rn===1?'':'s'} removed (&minus;${money(ra)}) as of Jun&nbsp;4</span>`:''}</div>`).join('');
-document.getElementById('statcap').innerHTML=
-  `<b>${st.footprint}</b> confirmed cross-over donors of ${st.subject} in filing &middot; ${st.multi} in 2+ arenas &middot; `
-  +`${st.cuomo} to Cuomo &middot; ${st.ie} to IE PACs &middot; ${st.aipac} to AIPAC/allies &middot; ${st.refunded} refunded`;
 
 const yrp = p => p.years ? ` <span class="yr">(${esc(p.years)})</span>` : '';
 function arenaHTML(r){
   let out='';
   const b=r.buckets;
-  if(b.cuomo) out+=`<div class="arena cuo"><p class="ah">Cuomo (mayor)${yrp(b.cuomo)} ${conf(b.cuomo.conf)}</p><div class="tot">${money(b.cuomo.amt)}</div></div>`;
+  if(b.cuomo) out+=`<div class="arena cuo"><p class="ah">Cuomo (mayor)${yrp(b.cuomo)}</p><div class="tot">${money(b.cuomo.amt)}</div></div>`;
   if(b.ie){
     const rows=b.ie.pacs.map(p=>`<div class="pac"><span>${pacName(p.name)}${yrp(p)}<span class="src">${esc(p.src)}</span></span><span class="amt">${money(p.amt)}</span></div>`).join('');
-    out+=`<div class="arena ie"><p class="ah">NYC / NY&nbsp;State IE PACs ${conf(b.ie.conf)}</p><div class="tot">${money(b.ie.total)}</div>${rows}</div>`;
+    out+=`<div class="arena ie"><p class="ah">NYC / NY&nbsp;State IE PACs</p><div class="tot">${money(b.ie.total)}</div>${rows}</div>`;
   }
   if(b.aipac){
     const rows=b.aipac.pacs.map(p=>`<div class="pac"><span>${esc(p.name)}${yrp(p)}</span><span class="amt">${money(p.amt)}</span></div>`).join('');
-    out+=`<div class="arena aip"><p class="ah">AIPAC &amp; allies ${conf(b.aipac.conf)}</p><div class="tot">${money(b.aipac.total)}</div>${rows}</div>`;
+    out+=`<div class="arena aip"><p class="ah">AIPAC &amp; allies</p><div class="tot">${money(b.aipac.total)}</div>${rows}</div>`;
   }
   return out;
 }
 function cardHTML(r){
   const empocc=[r.occ,r.emp].filter(Boolean).map(esc).join(' · ');
   const refb=r.refund?`<span class="badge ref">Reynoso refunded ${money(r.refund)}${r.refund_dates?` &middot; ${esc(r.refund_dates)}`:''}</span>`:'';
-  const multib=r.n_arenas>=2?`<span class="badge arenas2">${r.n_arenas} arenas</span>`:'';
   const arenas=r.n_arenas?`<div class="arenas">${arenaHTML(r)}</div>`:'';
   return `<div class="card${r.n_arenas?'':' noarenas'}" data-text="${esc((r.display+' '+r.emp+' '+JSON.stringify(r.buckets)).toLowerCase())}" data-multi="${r.n_arenas>=2}" data-ref="${!!r.refund}">
     <div class="who">
       <p class="name">${esc(r.display)}</p>
       <p class="meta">${empocc||'—'}</p>
       <p class="meta">${esc(r.loc)}</p>
-      <p class="reyamt">&rarr; Reynoso: <b>${money(r.rey_amt)}</b>${r.rey_dates?` <span class="yr">${esc(r.rey_dates)}</span>`:''}</p>
-      <div>${multib}${refb}</div>
+      <p class="reyamt">Reynoso: <b>${money(r.rey_amt)}</b>${r.rey_dates?` <span class="yr">${esc(r.rey_dates)}</span>`:''}</p>
+      <div>${refb}</div>
     </div>
     ${arenas}
   </div>`;
