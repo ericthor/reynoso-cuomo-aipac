@@ -20,6 +20,7 @@ CUOMO   = 'data/nyc-cfb/CFB_20260616155734714.csv'
 CFB_PAC = ['data/nyc-cfb/CFB_20260616144614138.csv', 'data/nyc-cfb/CFB_20260616151634515.csv']
 AIPAC   = 'data/aipac/AIPAC & Allies 2023-2024 Donor Data 2.0 - data (2023-2024).csv'
 STATE   = sorted(glob.glob('data/ny-state-boe/IndependentExpenditures*.csv'))
+SOLID   = sorted(glob.glob('data/solidarity-pac/*.csv'))   # Solidarity PAC (NY) contributions received
 DISB    = 'data/reynoso-fec/efile-2026-06-16T17_20_50.csv'
 
 ORG_KW = re.compile(r'\b(LLC|INC|L\.?P\.?|LTD|CORP|PAC|FUND|UNION|LOCAL|COUNCIL|COMMITTEE|'
@@ -42,7 +43,6 @@ EXCLUDE_DISPLAY = [
     'New Yorkers for Lower Costs',
     'OneNYC',
     'New York for Ray',
-    'Moving New York Families Forward',
     'Hudson Valley Voters',
     'Brooklyn Bridgebuilders',
     'New York Deserves Better PAC',
@@ -63,6 +63,8 @@ MANUAL_CONFIRM = {('IND', 'KEMPNER', 'MICHAEL')}
 # Source citations for specific committees: the committee name links to this URL
 # wherever it appears (interactive cards, IE/PAC summary table, and the PDF).
 PAC_REFS = {
+    'Solidarity PAC (NY)': 'https://nysfocus.com/2024/06/06/new-york-elections-israel-donations',
+    'Moving New York Families Forward': 'https://x.com/JCColtin/status/1793691674012762294',
     'Next NYC PAC': 'https://x.com/WillBredderman/status/2036077681222057985',
     'Fix the City, Inc.': 'https://www.politico.com/newsletters/new-york-playbook/2025/05/13/cuomos-very-very-super-pac-00343806',
     'New Yorkers For A Better Future 2025': 'https://truthout.org/articles/these-billionaires-have-already-spent-19-million-in-a-bid-to-defeat-mamdani/',
@@ -262,6 +264,28 @@ for path in AIPAC_2026:
             add_aip(k, AIPAC_SHORT.get(r.get('committee_name', ''), r.get('committee_name', '')),
                     fnum(r.get('contribution_receipt_amount')), r.get('contributor_zip'),
                     yr(r.get('report_year') or r.get('two_year_transaction_period')), r.get('contributor_employer'))
+
+# Solidarity PAC (NY) — a state-level pro-Israel PAC (run by the NY Solidarity Network) that
+# funds candidates against DSA / Working Families progressives. Folded in as another committee
+# under the NY-State IE PACs arena via add_ie. Names are "First Last" (parse with ns()); the
+# export's first column is the contribution date and carries no employer, so identity rests on
+# ZIP like the other IE PACs. NOTE: this is only money given *directly to the PAC* — the bulk of
+# the Solidarity network's money is funneled straight to its endorsed candidates and is NOT here.
+for path in SOLID:
+    with open(path, newline='', encoding='utf-8-sig') as f:
+        rd = csv.DictReader(f)
+        datecol = rd.fieldnames[0] if rd.fieldnames else None
+        for r in rd:
+            name = (r.get('Contributor Name') or '').strip()
+            if not name:                                 # unitemized small gifts carry no name
+                continue
+            k = ns(name)
+            if not k:
+                continue
+            d = (r.get(datecol) or '') if datecol else ''
+            year = d.split('/')[-1] if '/' in d else ''
+            add_ie(k, 'Solidarity PAC (NY)', fnum(r.get('Amount')), 'NY State',
+                   z5((r.get('Contributor Zip') or '').strip()), year if year.isdigit() else '')
 
 # Contribution refunds (Sch. 20A). The disbursement file gives only a LAST name +
 # ZIP, so attribute each refund to exactly one subject donor: require full-ZIP
@@ -516,6 +540,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     <b>confirmed by full ZIP code</b> (or employer); name-only matches are treated as different people and excluded,
     so every donor shown is ZIP-confirmed. NYC-CFB and NY-State report the same 2025 IE committees, so those are
     <b>de-duplicated by committee</b> (larger figure kept), not added. Cuomo and AIPAC are separate arenas.
+    <b>Solidarity&nbsp;PAC</b> &mdash; a state-level pro-Israel PAC (NY&nbsp;Solidarity Network) backing candidates
+    against DSA&nbsp;/&nbsp;Working&nbsp;Families progressives &mdash; is listed among the NY&nbsp;State PACs; its figures
+    count only money given <b>directly to the PAC</b>, not the larger sums it funnels straight to its endorsed candidates.
     &ldquo;Refunded&rdquo; = money the campaign returned (Schedule&nbsp;20A), tied to a donor by full ZIP and gift date.
     The <b>Cuomo&nbsp;/&nbsp;Fix the City</b> total counts <b>every</b> ZIP/employer-confirmed Reynoso donor who also gave
     to Cuomo&rsquo;s campaign or his Fix the City super PAC, including small gifts &mdash; the cards above list only the
