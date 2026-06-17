@@ -30,7 +30,6 @@
   .note b{color:var(--ink)}
   .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:28px 0 14px}
   input[type=search]{flex:1 1 280px;padding:10px 12px;border:1px solid var(--rule);background:var(--card);font:inherit;font-size:15px}
-  .toggle{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
   h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
     border-bottom:1px solid var(--rule);padding-bottom:6px;margin:42px 0 16px}
   .card{border:1px solid var(--rule);background:var(--card);margin:0 0 13px;display:flex;flex-wrap:wrap}
@@ -66,7 +65,7 @@
   a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   #noresults{color:var(--muted);font-size:14px;padding:26px 2px}
   .hidden{display:none}
-  @media (max-width:810px){.who{border-right:0;border-bottom:1px solid var(--rule)}.arena{border-left:0;border-top:1px solid var(--rule)}.arena:first-child{border-top:0}.toggle{padding:6px 0}.toggle input{width:18px;height:18px}}
+  @media (max-width:810px){.who{border-right:0;border-bottom:1px solid var(--rule)}.arena{border-left:0;border-top:1px solid var(--rule)}.arena:first-child{border-top:0}}
 </style>
 </head>
 <body>
@@ -83,8 +82,6 @@
 
   <div class="controls">
     <input type="search" id="q" aria-label="Filter donors by name, committee, or employer" placeholder="Filter by donor, committee, or employer&hellip;">
-    <label class="toggle"><input type="checkbox" id="multiOnly"> Only donors in 2+ arenas</label>
-    <label class="toggle"><input type="checkbox" id="refOnly"> Only refunded</label>
   </div>
 
   <div id="cards"></div>
@@ -158,7 +155,7 @@ function cardHTML(r){
   const empocc=[r.occ,r.emp].filter(Boolean).map(esc).join(' · ');
   const refb=r.refund?`<span class="badge ref">Reynoso refunded ${money(r.refund)}${r.refund_dates?` &middot; ${esc(r.refund_dates)}`:''}</span>`:'';
   const arenas=r.n_arenas?`<div class="arenas">${arenaHTML(r)}</div>`:'';
-  return `<div class="card${r.n_arenas?'':' noarenas'}" data-text="${esc((r.display+' '+r.emp+' '+JSON.stringify(r.buckets)).toLowerCase())}" data-multi="${r.n_arenas>=2}" data-ref="${!!r.refund}">
+  return `<div class="card${r.n_arenas?'':' noarenas'}" data-text="${esc((r.display+' '+r.emp+' '+JSON.stringify(r.buckets)).toLowerCase())}">
     <div class="who">
       <p class="name">${esc(r.display)}</p>
       <p class="meta">${empocc||'—'}</p>
@@ -175,19 +172,18 @@ document.getElementById('cards').innerHTML=DATA.records.map(cardHTML).join('');
 document.querySelector('#pacTable tbody').innerHTML=DATA.pac_summary.map(p=>
   `<tr><td>${pacName(p.name)}</td><td class="num">${p.donors}</td><td class="num">${money(p.amt)}</td></tr>`).join('');
 
-const q=document.getElementById('q'),mo=document.getElementById('multiOnly'),ro=document.getElementById('refOnly');
+const q=document.getElementById('q');
 function apply(){
   const t=q.value.trim().toLowerCase();
   let shown=0;
   document.querySelectorAll('.card').forEach(c=>{
-    const ok=(!t||c.dataset.text.includes(t))&&(!mo.checked||c.dataset.multi==='true')&&(!ro.checked||c.dataset.ref==='true');
+    const ok=(!t||c.dataset.text.includes(t));
     c.classList.toggle('hidden',!ok);
     if(ok)shown++;
   });
   document.getElementById('noresults').classList.toggle('hidden',shown>0);
 }
-[q,mo,ro].forEach(el=>el.addEventListener('input',apply));
-mo.addEventListener('change',apply);ro.addEventListener('change',apply);
+q.addEventListener('input',apply);
 </script>
 </body>
 </html>
