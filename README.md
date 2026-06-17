@@ -9,11 +9,11 @@ PACs** (2023–24 and 2025–26) — and flags who the campaign refunded.
 ## Outputs
 | File | What |
 |---|---|
-| **`index.html`** | The report — interactive (search, filters, committee links). ← deliverable |
+| **`public/index.html`** | The report — interactive (search, filters, committee links). ← deliverable |
 
 ## Regenerate
 ```sh
-python3 build_report.py        # rebuilds index.html from data/
+python3 build_report.py        # rebuilds public/index.html from data/
 ```
 
 ## Refresh the AIPAC federal data
@@ -57,7 +57,7 @@ python3 fetch_pac_receipts.py   # resumable; writes the combined receipts CSV
 - Cuomo-only matches **under $1,000** are dropped as low-signal unless the donor was refunded.
 
 ## Report layout
-`index.html`: **topline** (Reynoso's take from Cuomo / Fix-the-City donors
+`public/index.html`: **topline** (Reynoso's take from Cuomo / Fix-the-City donors
 and from AIPAC & allied donors) → per-donor **cards** (each donor's gift to Reynoso plus their
 footprint across Cuomo, the IE/PAC committees, and AIPAC, with live search/filters) →
 **IE / PAC committees most funded** by these donors.

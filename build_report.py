@@ -9,8 +9,8 @@ e-filing and, for each donor, show their full footprint across every other datas
 
 The NYC-CFB and NY-State-BOE systems both report the 2025 mayoral IE committees, so
 those are merged and de-duplicated by committee (max of the two reported figures) to
-avoid double-counting. Emits index.html (interactive)."""
-import csv, re, glob, json
+avoid double-counting. Emits public/index.html (interactive)."""
+import csv, re, glob, json, os
 from collections import defaultdict
 from datetime import datetime
 
@@ -619,10 +619,13 @@ mo.addEventListener('change',apply);ro.addEventListener('change',apply);
 </body>
 </html>"""
 
-with open('index.html', 'w') as f:
+# Output goes in public/ — the ONLY directory Netlify publishes, so the source data,
+# build script, and README are never uploaded to the live site.
+os.makedirs('public', exist_ok=True)
+with open('public/index.html', 'w') as f:
     f.write(TEMPLATE.replace('__PAYLOAD__', payload))
 
-print(f"Wrote index.html | {stats['subject']} donors, "
+print(f"Wrote public/index.html | {stats['subject']} donors, "
       f"{stats['footprint']} with outside footprint ({stats['multi']} in 2+ arenas) | "
       f"Cuomo {stats['cuomo']}, IE {stats['ie']}, AIPAC {stats['aipac']}, refunded {stats['refunded']} "
       f"(+{stats['refund_offlist']} off-filing)")
